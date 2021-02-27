@@ -5,8 +5,8 @@ import numpy as np
 import Utils as util
 import open3d as o3d
 
-model_ori = util.get_mesh('Model3D/bunny.tar/bunny/bunny/reconstruction/bun_zipper.ply')
-model = util.get_mesh('Model3D/bunny.tar/bunny/bunny/reconstruction/bun_zipper.ply')
+# model_ori = util.get_mesh('Model3D\dragon_recon.tar\dragon_recon\dragon_recon\dragon_vrip.ply')
+model = util.get_mesh('Model3D/dragon_recon.tar/dragon_recon/dragon_recon/dragon_vrip_res4.ply')
 
 model_en,privkey = util.encrypt_mesh(model,rangee=6189,bit_length=16)
 util.save_mesh("encrypt_rabbit.ply", model_en)

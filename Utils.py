@@ -8,18 +8,13 @@ from rsa.core import encrypt_int,decrypt_int
 import numpy as np
 
 def encrypt(num,pubkey):
-   return encrypt_int(int(num), pubkey.e, pubkey.n)
+   return encrypt_int((num.item()), pubkey.e, pubkey.n)
 
 def decrypt(crypto,privkey):
-   return decrypt_int(int(crypto), privkey.d, privkey.n)
+   return decrypt_int(crypto.item(), privkey.d, privkey.n)
 
 def encrypt_tri_matrix(ndarray,bit_length):
-   # res = []
-   # f = np.vectorize(encrypt)
-   # (pubkey, privkey) = rsa.newkeys(bit_length)
-   # for mat in ndarray:
-   #    res.append(f(mat,pubkey))
-   # return np.array(res),privkey
+
    res = []
    f = np.vectorize(encrypt)
    (pubkey, privkey) = rsa.newkeys(bit_length)
@@ -34,10 +29,7 @@ def encrypt_tri_matrix(ndarray,bit_length):
    return np.array(res),privkey
 
 def decrypt_tri_matrix(ndarray,privkey):
-   # res = []
-   # f = np.vectorize(decrypt)
-   # for mat in ndarray:
-   #    res.append(f(mat,privkey))
+
    res = []
    for mat in ndarray:
       temp_mat = []
@@ -94,24 +86,25 @@ def get_dct_coef_from_tri_matrix(ndarray):
 def get_idct_from_coef(ndarray):
    return np.array([idct(ar) for ar in ndarray])
 
-def flaot_to_int_normalize_matrix(ndarray,r = 780):
-   minn = np.min(ndarray)
-   maxx = np.max(ndarray)
+def flaot_to_int_normalize_matrix(ndarray,r = 780,minn=None,maxx=None):
+   if minn is None:
+      minn = -1
+   if maxx is None:
+      maxx = 1
 
    res = []
-
+   f = np.vectorize(int)
+   ro = np.vectorize(round)
    for mat in ndarray:
       t_r = (((mat - minn)/(maxx-minn))*r) + minn
-      res.append(np.round(t_r).astype(np.int64))
+      res.append(np.rint(t_r).astype(np.int64))
    
+   print('min = ',np.min(res))
    return np.array(res), minn,maxx,r
 
 def int_to_float_normalize_matrix(ndarray,r,minn,maxx):
 
    res = []
-
-   # xmin = np.min(ndarray)
-   # xmax = np.max(ndarray)
 
    for mat in ndarray:
       t_r = (((mat - minn)/r)*(maxx-minn)) + minn
@@ -132,6 +125,7 @@ def random_vertice(ndarray):
    return np.random.shuffle(ndarray)
 
 def encrypt_mesh(mesh_,rangee=50, bit_length=128):
+
    mesh = copy.deepcopy(mesh_)
    vert = get_vertices_ndarray(mesh)
    matrix,idx = get_triangle_matrix(mesh)
@@ -141,26 +135,19 @@ def encrypt_mesh(mesh_,rangee=50, bit_length=128):
    print(dct_coef_tri_norm_encrypted)
    dct_coef_tri_inv = int_to_float_normalize_matrix(dct_coef_tri_norm_encrypted,r,minn,maxx)
    idct_mat = get_idct_from_coef(dct_coef_tri_inv)/6
-
    vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
-
    mesh.vertices = get_vertices_vector(vert_new)
-
    return mesh,privkey
 
 def decrypt_mesh(mesh_,privkey,rangee=50):
    mesh = copy.deepcopy(mesh_)
-   
    vert = get_vertices_ndarray(mesh)
-   
    matrix,idx = get_triangle_matrix(mesh)
    dct_coef_tri = get_dct_coef_from_tri_matrix(matrix)
-
    dct_coef_tri_norm,minn,maxx,r = flaot_to_int_normalize_matrix(dct_coef_tri,r=rangee)
-   print(dct_coef_tri_norm)
    dct_coef_tri_norm_encrypted = decrypt_tri_matrix(dct_coef_tri_norm,privkey)
    dct_coef_tri_inv = int_to_float_normalize_matrix(dct_coef_tri_norm_encrypted,r,minn,maxx)
-   idct_mat = get_idct_from_coef(dct_coef_tri_inv)
+   idct_mat = get_idct_from_coef(dct_coef_tri_inv)/6
    vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
    mesh.vertices = get_vertices_vector(vert_new)
    return mesh
