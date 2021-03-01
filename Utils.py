@@ -24,6 +24,7 @@ from rsa.core import encrypt_int,decrypt_int
 from scipy.fftpack import dct,idct
 from scipy.ndimage import generic_filter
 from scipy.stats import entropy
+import math
 
 def encrypt_RSA(num,pubkey):
    """
@@ -491,26 +492,15 @@ def save_mesh(name,mesh):
    print("save",name,"successfully!")
 
 
-def _entropy(values):
-    probabilities = np.bincount(values.astype(np.int)) / float(len(values))
-    return entropy(probabilities)
+def calculate_entropy(mesh,privkey):
+   """
+   ## Calculate the entropy value for encrypted mesh
 
-def local_entropy(img, kernel_radius=2):
-    """
-    Compute the local entropy for each pixel in an image or image stack using the neighbourhood specified by the kernel.
+   input mesh : TriangleMesh (an encrypted mesh)
+         privkey : PrivateKey (private key object that used to decrypt the mesh)
 
-    Arguments:
-    ----------
-    img           -- 2D or 3D uint8 array with dimensions MxN or TxMxN, respectively.
-                     Input image.
-    kernel_radius -- int
-                     Neighbourhood over which to compute the local entropy.
-
-    Returns:
-    --------
-    h -- 2D or 3D uint8 array with dimensions MxN or TxMxN, respectively.
-         Local entropy.
-
-    """
-    return generic_filter(img.astype(np.float), _entropy, size=2*kernel_radius)
-
+   output entropy : float (a calculate entropy from k*log2(K) + 9*(M)*log2(9*M))
+   """
+   en_mat,idx1 = get_triangle_matrix(mesh)
+   en_mat = np.array(en_mat)  
+   return privkey.d*math.log(privkey.d,2)  +  9*(en_mat.shape[0])*math.log(9*en_mat.shape[0],2)
