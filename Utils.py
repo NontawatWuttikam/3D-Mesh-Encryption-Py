@@ -64,7 +64,6 @@ def encrypt_tri_matrix(ndarray,bit_length):
       output cypherArray (piecewise - encrypted ndarray)
 
    """
-
    res = []
    f = np.vectorize(encrypt_RSA)
    (pubkey, privkey) = rsa.newkeys(bit_length)
@@ -90,6 +89,53 @@ def decrypt_tri_matrix(ndarray,privkey):
    """
    res = []
    for mat in ndarray:
+      temp_mat = []
+      for row in mat:
+         temp_r = []
+         for ele in row:
+            temp_r.append(decrypt_RSA(ele,privkey))
+         temp_mat.append(temp_r)
+      res.append(temp_mat)
+   return np.array(res)
+
+def encrypt_tri_matrix_multikey(ndarray,bit_length):
+   
+   """
+   ## Encrypt any ndarray (normally 3x3) using RSA algorithm piecewisely
+
+      input ndarray: numpyArray (any NxN np array to encrypt)
+            bit_length: integer (bit length for rsa key)
+      
+      output cypherArray (piecewise - encrypted ndarray)
+
+   """
+   res = []
+   privkeys = []
+   f = np.vectorize(encrypt_RSA)
+   for mat in ndarray:
+      (pubkey, privkey) = rsa.newkeys(bit_length)
+      temp_mat = []
+      for row in mat:
+         temp_r = []
+         for ele in row:
+            temp_r.append(encrypt_RSA(ele,pubkey))
+         temp_mat.append(temp_r)
+      res.append(temp_mat)
+      privkeys.append(privkey)
+   return np.array(res),privkeys
+
+def decrypt_tri_matrix_multikeys(ndarray,privkeys):
+   """
+   ## decrypt any ndarray (normally 3x3) using RSA algorithm piecewisely
+
+      input ndarray: numpyArray (any NxN np array to encrypt)
+            privkey: PrivateKey (private key object generated from rsa)
+      
+      output ndarray (piecewise - decrypted ndarray)
+
+   """
+   res = []
+   for mat,privkey in zip(ndarray,privkeys):
       temp_mat = []
       for row in mat:
          temp_r = []
@@ -357,6 +403,74 @@ def decrypt_mesh_RSA(mesh_,privkey,rangee=50):
    dct_coef_tri = get_dct_coef_from_tri_matrix(matrix)
    dct_coef_tri_norm,minn,maxx,r = flaot_to_int_normalize_matrix(dct_coef_tri,r=rangee)
    dct_coef_tri_norm_encrypted = decrypt_tri_matrix(dct_coef_tri_norm,privkey)
+   dct_coef_tri_inv = int_to_float_normalize_matrix(dct_coef_tri_norm_encrypted,r,minn,maxx)
+   idct_mat = get_idct_from_coef(dct_coef_tri_inv)/6
+   vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
+   mesh.vertices = get_vertices_vector(vert_new)
+   return mesh
+
+def encrypt_mesh_RSA_multikey(mesh_,rangee=50, bit_length=128):
+   """
+   ## an encryption pipeline for RSA mesh encryption
+
+      input mesh_ : TriangleMesh (a original mesh for encryption)
+            rangee : integer (a mapping range for encryption proportional to quality)
+            bit_length : integer (a bit length for encrytion proportional to computional cost and security)
+            
+      output mesh: TriangleMesh (an encrypted mesh)
+             privkey: PrivateKey (a private key object for decryption)
+      
+      for the pipe line including:
+         
+         1. Deepcopy the mesh to another object (immuteable)
+
+         2. Extract 3x3 Triangle Matrices from mesh
+
+         3. In each matrices. find discrete cosine transform of 3x3 matrix to derive coef matrix.
+
+         4. In each coef matrices. Map the flaot domain to integer domain
+
+         5. In each mapped coef matrices. piecewisely encrypt each element in the matrices.
+
+         6. Normalize the encrypted triangle matrix back to float.
+
+         7. Map the 3x3 triangle matrix to 3x1 indexed triangle matrices.
+
+         8. Convert ndarray of indexted triangle matrices to Vector3d object.
+
+         9. Assign the Vector to the mesh.
+
+         10. Return Mesh and privkey.
+   """
+   mesh = copy.deepcopy(mesh_)
+   vert = get_vertices_ndarray(mesh)
+   matrix,idx = get_triangle_matrix(mesh)
+   dct_coef_tri = get_dct_coef_from_tri_matrix(matrix)
+   dct_coef_tri_norm,minn,maxx,r = flaot_to_int_normalize_matrix(dct_coef_tri,r=rangee)
+   dct_coef_tri_norm_encrypted,privkeys = encrypt_tri_matrix_multikey(dct_coef_tri_norm,bit_length)
+   print(dct_coef_tri_norm_encrypted)
+   dct_coef_tri_inv = int_to_float_normalize_matrix(dct_coef_tri_norm_encrypted,r,minn,maxx)
+   idct_mat = get_idct_from_coef(dct_coef_tri_inv)/6
+   vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
+   mesh.vertices = get_vertices_vector(vert_new)
+   return mesh,privkeys
+
+def decrypt_mesh_RSA_multikey(mesh_,privkeys,rangee=50):
+   """
+   ## an decryption pipeline for RSA mesh encryption
+
+      input mesh_ : TriangleMesh (an encrypted mesh for encryption)
+            rangee : integer (a mapping range for encryption proportional to quality)   
+            pprivkey: PrivateKey (a private key object for decryption)
+
+      output mesh: TriangleMesh (a decrypted mesh)       
+   """
+   mesh = copy.deepcopy(mesh_)
+   vert = get_vertices_ndarray(mesh)
+   matrix,idx = get_triangle_matrix(mesh)
+   dct_coef_tri = get_dct_coef_from_tri_matrix(matrix)
+   dct_coef_tri_norm,minn,maxx,r = flaot_to_int_normalize_matrix(dct_coef_tri,r=rangee)
+   dct_coef_tri_norm_encrypted = decrypt_tri_matrix_multikeys(dct_coef_tri_norm,privkeys)
    dct_coef_tri_inv = int_to_float_normalize_matrix(dct_coef_tri_norm_encrypted,r,minn,maxx)
    idct_mat = get_idct_from_coef(dct_coef_tri_inv)/6
    vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
