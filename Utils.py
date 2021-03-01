@@ -22,6 +22,8 @@ import copy
 import numpy as np
 from rsa.core import encrypt_int,decrypt_int
 from scipy.fftpack import dct,idct
+from scipy.ndimage import generic_filter
+from scipy.stats import entropy
 
 def encrypt_RSA(num,pubkey):
    """
@@ -238,7 +240,7 @@ def get_triangle_matrix(obj):
    matrix_set = []
    tri_matrix = np.array([[vert[i[0]], vert[i[1]], vert[i[2]]] for i in tri])
    idx_matrix = tri
-   return tri_matrix,idx_matrix
+   return np.array(tri_matrix),idx_matrix
    
 def get_dct_coef_from_vertices(ndarray):
    """
@@ -248,7 +250,7 @@ def get_dct_coef_from_vertices(ndarray):
 
       output dct: float ndarray(n,n) (a discrete cosine transform of 2d array)
    """
-   return dct(ndarray)
+   return dct(ndarray,type=2)
 
 def get_dct_coef_from_tri_matrix(ndarray):
    """
@@ -258,7 +260,7 @@ def get_dct_coef_from_tri_matrix(ndarray):
 
       output dct: float ndarray(m,n,n) (a discrete cosine transform of 2d array with m elements)
    """
-   return np.array([dct(ar) for ar in ndarray])
+   return np.array([dct(ar,type=2) for ar in ndarray])
 
 def get_idct_from_coef(ndarray):
    """
@@ -291,9 +293,10 @@ def flaot_to_int_normalize_matrix(ndarray,r = 780):
    for mat in ndarray:
       t_r = (((mat - minn)/(maxx-minn))*r) + minn
       res.append(np.rint(t_r).astype(np.int64))
-   
-   print('min = ',np.min(res))
-   return np.array(res), minn,maxx,r
+   res = np.array(res)
+   min_ar = np.min(res)
+   # res = res - min_ar
+   return res, minn,maxx,r
 
 def int_to_float_normalize_matrix(ndarray,r,minn,maxx):
    """
@@ -487,4 +490,27 @@ def save_mesh(name,mesh):
    o3d.io.write_triangle_mesh(name, mesh)
    print("save",name,"successfully!")
 
+
+def _entropy(values):
+    probabilities = np.bincount(values.astype(np.int)) / float(len(values))
+    return entropy(probabilities)
+
+def local_entropy(img, kernel_radius=2):
+    """
+    Compute the local entropy for each pixel in an image or image stack using the neighbourhood specified by the kernel.
+
+    Arguments:
+    ----------
+    img           -- 2D or 3D uint8 array with dimensions MxN or TxMxN, respectively.
+                     Input image.
+    kernel_radius -- int
+                     Neighbourhood over which to compute the local entropy.
+
+    Returns:
+    --------
+    h -- 2D or 3D uint8 array with dimensions MxN or TxMxN, respectively.
+         Local entropy.
+
+    """
+    return generic_filter(img.astype(np.float), _entropy, size=2*kernel_radius)
 
