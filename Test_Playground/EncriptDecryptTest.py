@@ -11,10 +11,10 @@ tri = np.array([[0,1,2]])
 dat.vertices = util.get_vertices_vector(ar)
 dat.triangles = util.get_triangle_vector(tri)
 # print(util.get_vertices_ndarray(dat))
-mat,k = util.encrypt_mesh(dat,bit_length=16,rangee=6189)
+mat,k = util.encrypt_mesh_RSA(dat,bit_length=16,rangee=6189)
 
 # print(util.get_vertices_ndarray(mat))
 
-mat_d = util.decrypt_mesh(mat,k,rangee=6189)
+mat_d = util.decrypt_mesh_RSA(mat,k,rangee=6189)
 
 print(util.get_vertices_ndarray(mat_d))
