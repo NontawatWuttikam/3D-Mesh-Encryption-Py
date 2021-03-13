@@ -18,6 +18,7 @@
 import open3d as o3d
 import numpy as np
 import rsa
+import random
 import copy
 import numpy as np
 from rsa.core import encrypt_int,decrypt_int
@@ -345,6 +346,33 @@ def random_vertice(ndarray):
    """
    return np.random.shuffle(ndarray)
 
+def getperm(d, seed):
+   random.seed(seed)
+   perm = list(range(d.shape[0]))
+   random.shuffle(perm)
+   random.seed() 
+   return perm
+
+def shuffle(ndarray): 
+   ndarray = np.array(ndarray)
+   l = ndarray.flatten()
+   seed = random.randint(1000000, 9999999)
+   perm = getperm(l,seed) 
+   l[:] = [l[j] for j in perm] 
+   l = np.reshape(l ,ndarray.shape)
+   return l, seed
+
+def unshuffle(ndarray,seed):
+   ndarray = np.array(ndarray)
+   l = ndarray.flatten()  
+   perm = getperm(l,seed)  
+   res = [None] * len(l) 
+   for i, j in enumerate(perm):
+      res[j] = l[i]
+   l[:] = res  
+   l = np.reshape(l ,ndarray.shape)
+   return l
+
 def encrypt_mesh_RSA(mesh_,rangee=50, bit_length=128):
    """
    ## an encryption pipeline for RSA mesh encryption
@@ -388,10 +416,11 @@ def encrypt_mesh_RSA(mesh_,rangee=50, bit_length=128):
    dct_coef_tri_inv = int_to_float_normalize_matrix(dct_coef_tri_norm_encrypted,r,minn,maxx)
    idct_mat = get_idct_from_coef(dct_coef_tri_inv)/6
    vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
+   vert_new,seed = shuffle(vert_new)
    mesh.vertices = get_vertices_vector(vert_new)
-   return mesh,privkey
+   return mesh,privkey,seed
 
-def decrypt_mesh_RSA(mesh_,privkey,rangee=50):
+def decrypt_mesh_RSA(mesh_,privkey,seed,rangee=50):
    """
    ## an decryption pipeline for RSA mesh encryption
 
@@ -403,6 +432,8 @@ def decrypt_mesh_RSA(mesh_,privkey,rangee=50):
    """
    mesh = copy.deepcopy(mesh_)
    vert = get_vertices_ndarray(mesh)
+   vert = unshuffle(vert,seed)
+   mesh.vertices = get_vertices_vector(vert)
    matrix,idx = get_triangle_matrix(mesh)
    dct_coef_tri = get_dct_coef_from_tri_matrix(matrix)
    dct_coef_tri_norm,minn,maxx,r = flaot_to_int_normalize_matrix(dct_coef_tri,r=rangee)
@@ -477,7 +508,7 @@ def decrypt_mesh_RSA_multikey(mesh_,privkeys,rangee=50):
    dct_coef_tri_norm_encrypted = decrypt_tri_matrix_multikeys(dct_coef_tri_norm,privkeys)
    dct_coef_tri_inv = int_to_float_normalize_matrix(dct_coef_tri_norm_encrypted,r,minn,maxx)
    idct_mat = get_idct_from_coef(dct_coef_tri_inv)/6
-   vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
+   vert_new = map_tri_matrix_to_vert_ar(idct_mat,get_triangle_ndarray(mesh_),vert)
    mesh.vertices = get_vertices_vector(vert_new)
    return mesh
 
@@ -503,4 +534,6 @@ def calculate_entropy(mesh,privkey):
    """
    en_mat,idx1 = get_triangle_matrix(mesh)
    en_mat = np.array(en_mat)  
-   return privkey.d*math.log(privkey.d,2)  +  9*(en_mat.shape[0])*math.log(9*en_mat.shape[0],2)
+   return  9*(en_mat.shape[0])*math.log(9*en_mat.shape[0],2)
+   # return 9*(en_mat.shape[0])*math.log(9*en_mat.shape[0],2)
+
