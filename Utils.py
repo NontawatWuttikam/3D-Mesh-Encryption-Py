@@ -26,6 +26,33 @@ from scipy.fftpack import dct,idct
 from scipy.ndimage import generic_filter
 from scipy.stats import entropy
 import math
+from ecc.curve import Curve25519,secp256k1,miniCurve,E222,P256,secp112r1
+from ecc.key import gen_keypair
+from ecc.cipher import ElGamal
+
+import struct
+
+def encrypt_tri_matrix_ECC(ndarray):
+   pri_key, pub_key = gen_keypair(secp112r1)
+   # Encrypt using ElGamal algorithm
+   cipher_elg = ElGamal(secp112r1)
+
+   new_ndarray = []
+   count = 0
+   for ele in ndarray:
+      te = []
+      for i in ele:
+         ti = []
+         for j in i:
+            ba = struct.pack("f", j) 
+            C1, C2 = cipher_elg.encrypt(ba, pub_key)
+            ti.append(int(str(C1.x)+str(C1.y)+str(C2.x)+str(C2.y)))
+         te.append(ti)
+      new_ndarray.append(te)
+      count += 1
+      print(count)
+   return np.array(new_ndarray),pri_key
+
 
 def encrypt_RSA(num,pubkey):
    """
@@ -50,12 +77,6 @@ def decrypt_RSA(crypto,privkey):
 
    """
    return decrypt_int(crypto.item(), privkey.d, privkey.n)
-
-def encrypt_ECC():
-   return None
-
-def decrypt_ECC():
-   return None
 
 def encrypt_tri_matrix(ndarray,bit_length):
 
@@ -419,6 +440,17 @@ def encrypt_mesh_RSA(mesh_,rangee=50, bit_length=128):
    vert_new,seed = shuffle(vert_new)
    mesh.vertices = get_vertices_vector(vert_new)
    return mesh,privkey,seed
+
+def encrypt_mesh_ECC(mesh_):
+
+   mesh = copy.deepcopy(mesh_)
+   vert = get_vertices_ndarray(mesh)
+   matrix,idx = get_triangle_matrix(mesh)
+   idct_mat,privkey = encrypt_tri_matrix_ECC(matrix)
+   idct_mat = idct_mat/np.max(idct_mat)
+   vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
+   mesh.vertices = get_vertices_vector(vert_new)
+   return mesh,privkey
 
 def decrypt_mesh_RSA(mesh_,privkey,seed,rangee=50):
    """

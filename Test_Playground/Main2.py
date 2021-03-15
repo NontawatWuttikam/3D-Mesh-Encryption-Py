@@ -1,7 +1,5 @@
-import Visualize3D as v3d
-import numpy as np
-import open3d
+import decimal
 
-mesh = v3d.get_mesh("D:\\3D-Encrypt\\bunny.tar\\bunny\\bunny\\reconstruction\\bun_zipper.ply")
-
-print(np.asarray(mesh.triangles))
+a  = decimal.Decimal(1.55)
+a = round(a,8)
+print(a,2)
