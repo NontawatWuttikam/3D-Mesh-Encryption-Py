@@ -5,13 +5,18 @@ import numpy as np
 import Utils as util
 import open3d as o3d
 import math
+import pickle
+
 # model_ori = util.get_mesh('Model3D\dragon_recon.tar\dragon_recon\dragon_recon\dragon_vrip.ply')
 model = util.get_mesh(r'D:\3D-Encrypt\Model3D\bunny.tar\bunny\bunny\reconstruction\bun_zipper_res4.ply')
-
+model.triangles = util.get_triangle_vector(util.get_triangle_ndarray(model)[:])
 # model_en,privkey,seed = util.encrypt_mesh_RSA(model,rangee=6189,bit_length=520)
 # util.save_mesh("encrypt_rabbit.ply", model_en)
 # model_dec = util.decrypt_mesh_RSA(model_en,privkey,4568125,rangee=6189)
-model_en,privkey = util.encrypt_mesh_ECC(model)
+model_en,points,privkey = util.encrypt_mesh_ECC(model)
+with open("points.txt", "wb") as fp:   #Pickling
+    pickle.dump(points, fp)
+print(points)
 util.save_mesh("encrypt_rabbit.ply", model_en)
 print(privkey)
 # model_dec = util.decrypt_mesh_ECC(model_en,privkey,4568125,rangee=6189)

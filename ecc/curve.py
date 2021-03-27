@@ -333,6 +333,16 @@ secp112r1 = ShortWeierstrassCurve(
     G_y=0xa89ce5af8724c0a23e0e0ff77500
 )
 
+secp112r2 = ShortWeierstrassCurve(
+    name="secp112r1",
+    a=0x6127c24c05f38a0aaaf65c0ef02c,
+    b=0x51def1815db5ed74fcc34c85d709,
+    p=0xdb7c2abf62e35e668076bead208b,
+    n=0x36df0aafd8b8d7597ca10520d04b,
+    G_x=0x4ba30ab5e892b4e1649dd0928643,
+    G_y=0xadcd46f5882e3747def36e956e97
+)
+
 magma = ShortWeierstrassCurve(
     name="magma",
     a=1456400922,

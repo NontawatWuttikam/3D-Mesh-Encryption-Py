@@ -26,33 +26,69 @@ from scipy.fftpack import dct,idct
 from scipy.ndimage import generic_filter
 from scipy.stats import entropy
 import math
-from ecc.curve import Curve25519,secp256k1,miniCurve,E222,P256,secp112r1
+from ecc.curve import Curve25519,secp256k1,miniCurve,E222,P256,secp112r2,Curve
 from ecc.key import gen_keypair
 from ecc.cipher import ElGamal
+from ecc.curve import Point
+
 
 import struct
 
 def encrypt_tri_matrix_ECC(ndarray):
-   pri_key, pub_key = gen_keypair(secp112r1)
+   pri_key, pub_key = gen_keypair(E222)
    # Encrypt using ElGamal algorithm
-   cipher_elg = ElGamal(secp112r1)
+   cipher_elg = ElGamal(E222)
+   num_ar = {str(i) for i in range(10)}
+   repeat_char_count = 10
+   new_ndarray = []
+   points_ndarray = []
+   count = 0
+   for ele in ndarray:
+      te = []
+      pte = []
+      for i in ele:
+         ti = []
+         pti = []
+         for j in i:
+            ba = struct.pack("f", j) 
+            C1, C2 = cipher_elg.encrypt(ba, pub_key)
+            num_preserved = {str(C1.x)[0], str(C1.y)[-1], str(C2.x)[0], str(C2.y)[-1]}
+            split_num = list(num_ar - num_preserved)[0]
+            cipher = int(str(C1.x)+split_num*repeat_char_count+str(C1.y)+split_num*repeat_char_count+str(C2.x)+split_num*repeat_char_count+str(C2.y))
+            if count == 0:
+               print(cipher)
+            ti.append(cipher)
+            pti.append([C1,C2])
+         te.append(ti)
+         pte.append(pti)
+      new_ndarray.append(te)
+      points_ndarray.append(pte)
+      count += 1
+      print(count)
+   return np.array(new_ndarray),points_ndarray,pri_key
+
+def decrypt_tri_matrix_ECC(ndarray,privkey):
+   pri_key, pub_key = gen_keypair(E222)
+   # Encrypt using ElGamal algorithm
+   cipher_elg = ElGamal(E222)
 
    new_ndarray = []
+   repeat_char_count = 10
    count = 0
    for ele in ndarray:
       te = []
       for i in ele:
          ti = []
          for j in i:
-            ba = struct.pack("f", j) 
-            C1, C2 = cipher_elg.encrypt(ba, pub_key)
-            ti.append(int(str(C1.x)+str(C1.y)+str(C2.x)+str(C2.y)))
+
+            dec_byte = cipher_elg.decrypt(privkey, j[0],j[1])
+            dec_float = struct.unpack('f',dec_byte)
+            ti.append(dec_float)
          te.append(ti)
       new_ndarray.append(te)
       count += 1
       print(count)
-   return np.array(new_ndarray),pri_key
-
+   return np.array(new_ndarray)
 
 def encrypt_RSA(num,pubkey):
    """
@@ -353,7 +389,7 @@ def map_tri_matrix_to_vert_ar(ndarray, idxarray, old_vert):
    vert = old_vert.copy()
    for mat,idx in zip(ndarray,idxarray):
       for point, idex in zip(mat,idx):
-         vert[idex] = point
+         vert[idex] = point.squeeze()
    
    return vert
 
@@ -374,10 +410,9 @@ def getperm(d, seed):
    random.seed() 
    return perm
 
-def shuffle(ndarray): 
+def shuffle(ndarray,seed): 
    ndarray = np.array(ndarray)
    l = ndarray.flatten()
-   seed = random.randint(1000000, 9999999)
    perm = getperm(l,seed) 
    l[:] = [l[j] for j in perm] 
    l = np.reshape(l ,ndarray.shape)
@@ -441,16 +476,49 @@ def encrypt_mesh_RSA(mesh_,rangee=50, bit_length=128):
    mesh.vertices = get_vertices_vector(vert_new)
    return mesh,privkey,seed
 
+def shuffle_tri_matrix(tri_matrix,seed):
+   tm = tri_matrix.copy()
+   tm = tm.flatten()
+   shuffle(tm,seed)
+   print(tm.reshape(tri_matrix.shape) - tri_matrix)
+   return tm.reshape(tri_matrix.shape)
+   
+def unshuffle_tri_matrix(tri_matrix,seed):
+   tm = tri_matrix.copy()
+   tm = tm.flatten()
+   unshuffle(tm,seed)
+   print(tm.reshape(tri_matrix.shape) - tri_matrix)
+   return tm.reshape(tri_matrix.shape)
+
 def encrypt_mesh_ECC(mesh_):
 
    mesh = copy.deepcopy(mesh_)
    vert = get_vertices_ndarray(mesh)
    matrix,idx = get_triangle_matrix(mesh)
-   idct_mat,privkey = encrypt_tri_matrix_ECC(matrix)
+   idct_mat,point_ndarray,privkey = encrypt_tri_matrix_ECC(matrix)
+   # normalize code
    idct_mat = idct_mat/np.max(idct_mat)
+   seed_key = privkey
+   idct_mat = shuffle_tri_matrix(idct_mat, seed_key)
+   point_ndarray = shuffle_tri_matrix(np.array(point_ndarray),seed_key)
    vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
    mesh.vertices = get_vertices_vector(vert_new)
-   return mesh,privkey
+   return mesh,point_ndarray,privkey
+
+def decrypt_mesh_ECC(mesh_,point_ndarray,privkey):
+
+   mesh = copy.deepcopy(mesh_)
+   vert = get_vertices_ndarray(mesh)
+   matrix,idx = get_triangle_matrix(mesh)
+   seed_key = privkey
+   idct_mat = unshuffle_tri_matrix(matrix, seed_key)
+   point_ndarray =  unshuffle_tri_matrix(point_ndarray,seed_key)
+   idct_mat = decrypt_tri_matrix_ECC(point_ndarray,privkey)
+   #normalize code
+   # idct_mat = idct_mat/np.max(idct_mat)
+   vert_new = map_tri_matrix_to_vert_ar(idct_mat,idx,vert)
+   mesh.vertices = get_vertices_vector(vert_new)
+   return mesh
 
 def decrypt_mesh_RSA(mesh_,privkey,seed,rangee=50):
    """
