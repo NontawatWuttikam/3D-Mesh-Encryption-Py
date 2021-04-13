@@ -34,8 +34,12 @@ from ecc.curve import Point
 
 import struct
 
-def encrypt_tri_matrix_ECC(ndarray):
-   pri_key, pub_key = gen_keypair(E222)
+
+def encrypt_tri_matrix_ECC(ndarray,pub_key = None):
+   if pub_key is None:
+     pri_key, pub_key = gen_keypair(E222)
+   else:
+     pri_key = None
    # Encrypt using ElGamal algorithm
    cipher_elg = ElGamal(E222)
    num_ar = {str(i) for i in range(10)}
@@ -55,8 +59,6 @@ def encrypt_tri_matrix_ECC(ndarray):
             num_preserved = {str(C1.x)[0], str(C1.y)[-1], str(C2.x)[0], str(C2.y)[-1]}
             split_num = list(num_ar - num_preserved)[0]
             cipher = int(str(C1.x)+split_num*repeat_char_count+str(C1.y)+split_num*repeat_char_count+str(C2.x)+split_num*repeat_char_count+str(C2.y))
-            if count == 0:
-               print(cipher)
             ti.append(cipher)
             pti.append([C1,C2])
          te.append(ti)
@@ -64,8 +66,11 @@ def encrypt_tri_matrix_ECC(ndarray):
       new_ndarray.append(te)
       points_ndarray.append(pte)
       count += 1
-      print(count)
-   return np.array(new_ndarray),points_ndarray,pri_key
+      print("progress : ",count,':',ndarray.shape[0])
+   if pub_key is None:
+    return np.array(new_ndarray),points_ndarray,pri_key
+   else:
+    return np.array(new_ndarray),points_ndarray
 
 def decrypt_tri_matrix_ECC(ndarray,privkey):
    pri_key, pub_key = gen_keypair(E222)
@@ -87,30 +92,26 @@ def decrypt_tri_matrix_ECC(ndarray,privkey):
          te.append(ti)
       new_ndarray.append(te)
       count += 1
-      print(count)
+      print("progress : ",count,':',ndarray.shape[0])
    return np.array(new_ndarray)
 
 def encrypt_RSA(num,pubkey):
    """
    ## Ecrypt integer with public key generated
-
       input num: integer (the number to encrypt)
             pubkey: PublicKey (the publickey obj generated from rsa)
       
       output cypherInt (encrypted integer)
-
    """
    return encrypt_int((num.item()), pubkey.e, pubkey.n)
 
 def decrypt_RSA(crypto,privkey):
    """
    ## Decrypt cypherInt with private key generated
-
       input cyrpto: integer (the cypherInt to decrypt)
             privkey: PrivateKey (private key object generated from rsa)
       
       output integer (decrypted integer)
-
    """
    return decrypt_int(crypto.item(), privkey.d, privkey.n)
 
@@ -118,12 +119,10 @@ def encrypt_tri_matrix(ndarray,bit_length):
 
    """
    ## Encrypt any ndarray (normally 3x3) using RSA algorithm piecewisely
-
       input ndarray: numpyArray (any NxN np array to encrypt)
             bit_length: integer (bit length for rsa key)
       
       output cypherArray (piecewise - encrypted ndarray)
-
    """
    res = []
    f = np.vectorize(encrypt_RSA)
@@ -141,12 +140,10 @@ def encrypt_tri_matrix(ndarray,bit_length):
 def decrypt_tri_matrix(ndarray,privkey):
    """
    ## decrypt any ndarray (normally 3x3) using RSA algorithm piecewisely
-
       input ndarray: numpyArray (any NxN np array to encrypt)
             privkey: PrivateKey (private key object generated from rsa)
       
       output ndarray (piecewise - decrypted ndarray)
-
    """
    res = []
    for mat in ndarray:
@@ -163,12 +160,10 @@ def encrypt_tri_matrix_multikey(ndarray,bit_length):
    
    """
    ## Encrypt any ndarray (normally 3x3) using RSA algorithm piecewisely
-
       input ndarray: numpyArray (any NxN np array to encrypt)
             bit_length: integer (bit length for rsa key)
       
       output cypherArray (piecewise - encrypted ndarray)
-
    """
    res = []
    privkeys = []
@@ -188,12 +183,10 @@ def encrypt_tri_matrix_multikey(ndarray,bit_length):
 def decrypt_tri_matrix_multikeys(ndarray,privkeys):
    """
    ## decrypt any ndarray (normally 3x3) using RSA algorithm piecewisely
-
       input ndarray: numpyArray (any NxN np array to encrypt)
             privkey: PrivateKey (private key object generated from rsa)
       
       output ndarray (piecewise - decrypted ndarray)
-
    """
    res = []
    for mat,privkey in zip(ndarray,privkeys):
@@ -209,10 +202,8 @@ def decrypt_tri_matrix_multikeys(ndarray,privkeys):
 def show_mesh_from_file(file,cvn=True):
    """
    ## show mesh from input path .ply
-
       input file: String (path string of .ply file)
             cvn: Boolean (calculate normal or not)
-
    """
    mesh = o3d.io.read_triangle_mesh(file)
    if cvn:
@@ -222,18 +213,14 @@ def show_mesh_from_file(file,cvn=True):
 def get_mesh(file):
    """
    ## get_mesh open3d object from file path
-
       input file: String (path string of .ply file)
-
       output mesh: TriangleMesh (mesh object)
-
    """
    return o3d.io.read_triangle_mesh(file)
 
 def show_mesh(ar,cvn=True):
    """
    ## show mesh in multiple object
-
       input ar: List (a list of open3d mesh object for display)
             cvn: Boolean (calculate normal or not)
    """
@@ -245,9 +232,7 @@ def show_mesh(ar,cvn=True):
 def get_vertices_ndarray(obj):
    """
    ## get vertice in ndarray from mesh object
-
       input obj: TriangleMesh (a TriangleMesh object)
-
       output vertices: ndarray (a numpy array of vertices) 
    """
    return np.asarray(obj.vertices)
@@ -255,9 +240,7 @@ def get_vertices_ndarray(obj):
 def get_vertices_vector(ndarray):
    """
    ## get vertice in Vector3d from vertices ndarray
-
       input ndarray: ndarray (a numpy array of vertices)
-
       output vertices: Vector3dVector (a vector3d object of vertices)
    """
    return o3d.utility.Vector3dVector(ndarray)
@@ -265,9 +248,7 @@ def get_vertices_vector(ndarray):
 def get_triangle_ndarray(obj):
    """
    ## get vertice in ndarray from mesh object
-
       input obj: TriangleMesh (a TriangleMesh object)
-
       output triangles: ndarray (a numpy array of trangles) 
    """
    return np.asarray(obj.triangles)
@@ -275,9 +256,7 @@ def get_triangle_ndarray(obj):
 def get_triangle_vector(ndarray):
    """
    ## get vertice in Vector3d from vertices ndarray
-
       input ndarray: ndarray (a numpy array of triangles)
-
       output triangles: Vector3iVector (a vector3d object of triangle)
    """
    return o3d.utility.Vector3iVector(ndarray)
@@ -285,12 +264,9 @@ def get_triangle_vector(ndarray):
 def get_triangle_matrix(obj):
    """
    ## get 3x3 triangle matrix from TriangleMesh object
-
       input obj: TriangleMesh (a Triangle Mesh object)
-
       output tri_matrix : ndarray(m,3,3) (an extracted triangle matrix)
              idx_matrix : ndarray(m,3) (index of each triangle matrix that mappped to vertices)
-
              ** m: integer (vertcices length)
    """
    tri = get_triangle_ndarray(obj)
@@ -304,9 +280,7 @@ def get_triangle_matrix(obj):
 def get_dct_coef_from_vertices(ndarray):
    """
    ## get dct coefficient from any 2d ndarray
-
       input ndarray : int ndarray(n,n) (a 2d ndarray)
-
       output dct: float ndarray(n,n) (a discrete cosine transform of 2d array)
    """
    return dct(ndarray,type=2)
@@ -314,9 +288,7 @@ def get_dct_coef_from_vertices(ndarray):
 def get_dct_coef_from_tri_matrix(ndarray):
    """
    ## get dct coefficient from any multiple 2d ndarray 
-
       input ndarray : int ndarray(m,n,n) (a 2d ndarray wth m triangle)
-
       output dct: float ndarray(m,n,n) (a discrete cosine transform of 2d array with m elements)
    """
    return np.array([dct(ar,type=2) for ar in ndarray])
@@ -324,9 +296,7 @@ def get_dct_coef_from_tri_matrix(ndarray):
 def get_idct_from_coef(ndarray):
    """
    ## get idct coefficient from any multiple 2d ndarray 
-
       input ndarray : float ndarray(m,n,n) (a 2d ndarray wth m idct matrix)
-
       output idct: int ndarray(m,n,n) (a 2d idct matrix with m elements)
    """
    return np.array([idct(ar) for ar in ndarray])
@@ -334,10 +304,8 @@ def get_idct_from_coef(ndarray):
 def flaot_to_int_normalize_matrix(ndarray,r = 780):
    """
    ## normalize the (m,n,n) ndarray with m elements from float to integer
-
       input ndarray : float ndarray(m,n,n) (a 2d array with m elements in float space)
             **optional** r : integer (a mapping range from float to integer)
-
       output res: ndarray(m,n,n) (a 2d array with m elements in integer domain)
              minn : integer (min value of the float space in each m)
              maxx : integer (max value of the float space in each m)
@@ -360,12 +328,10 @@ def flaot_to_int_normalize_matrix(ndarray,r = 780):
 def int_to_float_normalize_matrix(ndarray,r,minn,maxx):
    """
    ## normalize the (m,n,n) ndarray with m elements from float to integer
-
       input ndarray : ndarray(m,n,n) (a 2d array with m elements in integer domain)
             minn : integer (min value of the float space in each m)
             maxx : integer (max value of the float space in each m)
             r : integer (a mapping range from float to integer)
-
       output res: float ndarray(m,n,n) (a 2d array with m elements in float space)
    """
    res = []
@@ -379,11 +345,9 @@ def int_to_float_normalize_matrix(ndarray,r,minn,maxx):
 def map_tri_matrix_to_vert_ar(ndarray, idxarray, old_vert):
    """
    ## map each 3*3 triangle matrix  with m elements to vertices array from given index.
-
       input ndarray : ndarray(m,3,3) (a 2d array with m elements of triangles)
             idxarray : ndarray(m,3) (a given index (old triangles ndarray) with m elemnents)
             old_vert : ndarray(m,3) (an old vertices object from the same mesh)
-
       output vert : ndarray(m,3) (a new verices object mapped from idx and tri matrix)
    """
    vert = old_vert.copy()
@@ -396,9 +360,7 @@ def map_tri_matrix_to_vert_ar(ndarray, idxarray, old_vert):
 def random_vertice(ndarray):
    """
    ## random any ndarray in the right-most axis with numpy shuffle
-
       input ndarray : ndarray(m,3) (a 2d array with m elements of vertices)
-
       output vert : ndarray(m,3) (a shuffled ndarray)
    """
    return np.random.shuffle(ndarray)
@@ -432,7 +394,6 @@ def unshuffle(ndarray,seed):
 def encrypt_mesh_RSA(mesh_,rangee=50, bit_length=128):
    """
    ## an encryption pipeline for RSA mesh encryption
-
       input mesh_ : TriangleMesh (a original mesh for encryption)
             rangee : integer (a mapping range for encryption proportional to quality)
             bit_length : integer (a bit length for encrytion proportional to computional cost and security)
@@ -443,23 +404,14 @@ def encrypt_mesh_RSA(mesh_,rangee=50, bit_length=128):
       for the pipe line including:
          
          1. Deepcopy the mesh to another object (immuteable)
-
          2. Extract 3x3 Triangle Matrices from mesh
-
          3. In each matrices. find discrete cosine transform of 3x3 matrix to derive coef matrix.
-
          4. In each coef matrices. Map the flaot domain to integer domain
-
          5. In each mapped coef matrices. piecewisely encrypt each element in the matrices.
-
          6. Normalize the encrypted triangle matrix back to float.
-
          7. Map the 3x3 triangle matrix to 3x1 indexed triangle matrices.
-
          8. Convert ndarray of indexted triangle matrices to Vector3d object.
-
          9. Assign the Vector to the mesh.
-
          10. Return Mesh and privkey.
    """
    mesh = copy.deepcopy(mesh_)
@@ -479,23 +431,23 @@ def encrypt_mesh_RSA(mesh_,rangee=50, bit_length=128):
 def shuffle_tri_matrix(tri_matrix,seed):
    tm = tri_matrix.copy()
    tm = tm.flatten()
-   shuffle(tm,seed)
-   print(tm.reshape(tri_matrix.shape) - tri_matrix)
-   return tm.reshape(tri_matrix.shape)
+   l,seeds = shuffle(tm,seed)
+  #  print(tm.reshape(tri_matrix.shape) - tri_matrix)
+   return l.reshape(tri_matrix.shape)
    
 def unshuffle_tri_matrix(tri_matrix,seed):
    tm = tri_matrix.copy()
    tm = tm.flatten()
-   unshuffle(tm,seed)
-   print(tm.reshape(tri_matrix.shape) - tri_matrix)
-   return tm.reshape(tri_matrix.shape)
+   l = unshuffle(tm,seed)
+  #  print(tm.reshape(tri_matrix.shape) - tri_matrix)
+   return l.reshape(tri_matrix.shape)
 
-def encrypt_mesh_ECC(mesh_):
+def encrypt_mesh_ECC(mesh_,pub_key = None):
 
    mesh = copy.deepcopy(mesh_)
    vert = get_vertices_ndarray(mesh)
    matrix,idx = get_triangle_matrix(mesh)
-   idct_mat,point_ndarray,privkey = encrypt_tri_matrix_ECC(matrix)
+   idct_mat,point_ndarray,privkey = encrypt_tri_matrix_ECC(matrix,pub_key)
    # normalize code
    idct_mat = idct_mat/np.max(idct_mat)
    seed_key = privkey
@@ -523,11 +475,9 @@ def decrypt_mesh_ECC(mesh_,point_ndarray,privkey):
 def decrypt_mesh_RSA(mesh_,privkey,seed,rangee=50):
    """
    ## an decryption pipeline for RSA mesh encryption
-
       input mesh_ : TriangleMesh (an encrypted mesh for encryption)
             rangee : integer (a mapping range for encryption proportional to quality)   
             pprivkey: PrivateKey (a private key object for decryption)
-
       output mesh: TriangleMesh (a decrypted mesh)       
    """
    mesh = copy.deepcopy(mesh_)
@@ -547,7 +497,6 @@ def decrypt_mesh_RSA(mesh_,privkey,seed,rangee=50):
 def encrypt_mesh_RSA_multikey(mesh_,rangee=50, bit_length=128):
    """
    ## an encryption pipeline for RSA mesh encryption
-
       input mesh_ : TriangleMesh (a original mesh for encryption)
             rangee : integer (a mapping range for encryption proportional to quality)
             bit_length : integer (a bit length for encrytion proportional to computional cost and security)
@@ -558,23 +507,14 @@ def encrypt_mesh_RSA_multikey(mesh_,rangee=50, bit_length=128):
       for the pipe line including:
          
          1. Deepcopy the mesh to another object (immuteable)
-
          2. Extract 3x3 Triangle Matrices from mesh
-
          3. In each matrices. find discrete cosine transform of 3x3 matrix to derive coef matrix.
-
          4. In each coef matrices. Map the flaot domain to integer domain
-
          5. In each mapped coef matrices. piecewisely encrypt each element in the matrices.
-
          6. Normalize the encrypted triangle matrix back to float.
-
          7. Map the 3x3 triangle matrix to 3x1 indexed triangle matrices.
-
          8. Convert ndarray of indexted triangle matrices to Vector3d object.
-
          9. Assign the Vector to the mesh.
-
          10. Return Mesh and privkey.
    """
    mesh = copy.deepcopy(mesh_)
@@ -593,11 +533,9 @@ def encrypt_mesh_RSA_multikey(mesh_,rangee=50, bit_length=128):
 def decrypt_mesh_RSA_multikey(mesh_,privkeys,rangee=50):
    """
    ## an decryption pipeline for RSA mesh encryption
-
       input mesh_ : TriangleMesh (an encrypted mesh for encryption)
             rangee : integer (a mapping range for encryption proportional to quality)   
             pprivkey: PrivateKey (a private key object for decryption)
-
       output mesh: TriangleMesh (a decrypted mesh)       
    """
    mesh = copy.deepcopy(mesh_)
@@ -615,7 +553,6 @@ def decrypt_mesh_RSA_multikey(mesh_,privkeys,rangee=50):
 def save_mesh(name,mesh):
    """
    ## save a TriangleMesh objec to .ply
-
       input name : String (a string path and filename to save)
             mesh: TriangleMesh   
    """
@@ -626,14 +563,11 @@ def save_mesh(name,mesh):
 def calculate_entropy(mesh,privkey):
    """
    ## Calculate the entropy value for encrypted mesh
-
    input mesh : TriangleMesh (an encrypted mesh)
          privkey : PrivateKey (private key object that used to decrypt the mesh)
-
    output entropy : float (a calculate entropy from k*log2(K) + 9*(M)*log2(9*M))
    """
    en_mat,idx1 = get_triangle_matrix(mesh)
    en_mat = np.array(en_mat)  
    return  9*(en_mat.shape[0])*math.log(9*en_mat.shape[0],2)
    # return 9*(en_mat.shape[0])*math.log(9*en_mat.shape[0],2)
-
